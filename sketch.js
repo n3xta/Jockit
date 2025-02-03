@@ -1,76 +1,88 @@
-let sound;
-let frames = [];
-let isPlaying = false;
-let showGif = false;
-let frameIndex = 0;
-let frameTimer = 0;
-let frameDuration = 3; // 控制动画速度
-
 let cols = 4;
 let rows = 4;
 let w, h;
 
-function preload() {
-  sound = loadSound("audio/Atmo_Shot_1.wav");
+let soundMap = {};
+let animationFrames = {};
+let isPlaying = {};
+let frameIndex = {};
+let frameTimer = {};
+let frameDuration = 2;
 
-  // 预加载 4 帧 PNG
-  for (let i = 0; i < 4; i++) {
-    frames.push(loadImage(`visuals/11_000${i}.png`));
+let soundFiles = [
+  "Go.wav", "Atmo_Shot_1.wav", "Atmo_Shot_2.wav", "Fizz.wav", "DeDen.wav", "Finger_Snap.wav", "Foley_Glass_1.wav", "Foley_Glass_2.wav", "Foley_Switch.wav", "Foley_Sword.wav", "HNS_Kick.wav", "HNS_Snare.wav", "Laser_Shot.wav", "Toms_1.wav", "Toms_2.wav", "Toms_3.wav"
+];
+
+function preload() {
+  w = 400 / cols;
+  h = 400 / rows;
+
+  for (let i = 0; i < soundFiles.length; i++) {
+    let x = i % cols;
+    let y = Math.floor(i / cols);
+    let key = `${x},${y}`;
+    soundMap[key] = loadSound(`audio/${soundFiles[i]}`);
+    isPlaying[key] = false;
+    frameIndex[key] = 0;
+    frameTimer[key] = 0;
+  }
+
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      let key = `${i},${j}`;
+      animationFrames[key] = [];
+      for (let k = 0; k < 4; k++) {
+        animationFrames[key].push(loadImage(`visuals/${j}${i}_000${k}.png`));
+      }
+    }
   }
 }
 
 function setup() {
-  createCanvas(400, 400);
-  w = width / cols; // 计算单个 block 宽度
-  h = height / rows; // 计算单个 block 高度
+  createCanvas(1080, 1440);
 }
 
 function draw() {
-  background(220);
+  background(255);
 
   for (let i = 0; i < cols; i++) {
     for (let j = 0; j < rows; j++) {
       let x = i * w;
       let y = j * h;
+      let key = `${i},${j}`;
 
-      stroke(0);
+      stroke(200);
+      strokeWeight(5);
       noFill();
       rect(x, y, w, h);
 
-      if (i === 1 && j === 1 && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h) {
-        fill(200, 100, 100, 150);
+      if (mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h) {
+        //fill(200, 100, 100, 150);
         rect(x, y, w, h);
 
-        if (!isPlaying) {
-          sound.play();
-          isPlaying = true;
-          showGif = true;
-          frameIndex = 0;
-          frameTimer = 0;
+        if (!isPlaying[key]) {
+          soundMap[key].play();
+          isPlaying[key] = true;
+          frameIndex[key] = 0;
+          frameTimer[key] = 0;
+        }
+      } else {
+        isPlaying[key] = false;
+      }
+
+      if (isPlaying[key] && frameIndex[key] < animationFrames[key].length) {
+        image(animationFrames[key][frameIndex[key]], x, y, w, h);
+
+        frameTimer[key]++;
+        if (frameTimer[key] >= frameDuration) {
+          frameTimer[key] = 0;
+          frameIndex[key]++;
+
+          if (frameIndex[key] >= animationFrames[key].length) {
+            isPlaying[key] = false;
+          }
         }
       }
     }
-  }
-
-  if (showGif) {
-    let gifX = w * 1;
-    let gifY = h * 1;
-
-    image(frames[frameIndex], gifX, gifY, w, h);
-
-    frameTimer++;
-    if (frameTimer >= frameDuration) {
-      frameTimer = 0;
-      frameIndex++;
-
-      if (frameIndex >= frames.length) {
-        showGif = false;
-      }
-    }
-  }
-
-  // 监听鼠标是否离开整个 canvas
-  if (mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height) {
-    isPlaying = false;
   }
 }
