@@ -1,3 +1,8 @@
+@font-face {
+  font-family: "PP Mondwest";
+  src: url("fonts/PPMondwest-Regular.otf") style("opentype");
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -5,4 +10,36 @@ html, body {
 
 canvas {
   display: block;
+}
+
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6); /* 半透明黑色遮罩 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#startButton {
+  font-family: "PP Mondwest", sans-serif;
+  font-size: 300px;
+  padding: 20px 40px;
+  border: none;
+  background-color: #ffffff00;
+  color: #ffffff;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+#overlay p {
+  font-family: "PP Mondwest", sans-serif;
+  font-size: 50px;
+  color: #fff;
 }

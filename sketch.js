@@ -1,3 +1,5 @@
+let started = false;
+
 let palettes = [
   ['#cdb4db', '#ffc8dd', '#ffafcc', '#bde0fe', '#a2d2ff'],
   ['#0a0908', '#22333b', '#eae0d5', '#c6ac8f', '#5e503f'],
@@ -7,6 +9,8 @@ let palettes = [
 let currentPaletteIndex = 0;
 
 let paletteSwitchSounds = [];
+
+let globalAnalyzer;
 
 let cols = 4;
 let rows = 4;
@@ -20,7 +24,7 @@ let animationFrames = {};
 let isPlaying = {};
 let frameIndex = {};
 let frameTimer = {};
-let frameDuration = 2;
+let frameDuration = 3;
 
 let mosaicSquaresA = [];
 let mosaicSquaresD = [];
@@ -88,19 +92,64 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(1080, 1080);
+  createCanvas(windowWidth, windowHeight);
   gridOffsetX = (width - gridWidth) / 2;
   gridOffsetY = (height - gridHeight) / 2;
+  globalAnalyzer = new Tone.Waveform(32);
+  Tone.Destination.connect(globalAnalyzer);
+
+  const overlay = document.getElementById("overlay");
+  const startButton = document.getElementById("startButton");
+
+  startButton.addEventListener("click", function() {
+    Tone.start();
+    started = true;
+    overlay.style.display = "none";
+  });
 }
 
 function draw() {
   background(palettes[currentPaletteIndex][0]);
+  if (!started) return;
+
+  let waveform = globalAnalyzer.getValue();
+
+  let sum = 0;
+  for (let i = 0; i < waveform.length; i++) {
+    sum += abs(waveform[i]);
+  }
+  let avgAmp = sum / waveform.length;
+  
+  if (avgAmp > 0.05) {
+    fill((palettes[currentPaletteIndex][4]));
+    noStroke();
+    let scaleFactor = 250;
+    
+    beginShape();
+    vertex(0, height);
+    for (let i = 0; i < waveform.length; i++) {
+      let x = map(i, 0, waveform.length - 1, 0, width);
+      let y = height - waveform[i] * scaleFactor;
+      vertex(x, y);
+    }
+    vertex(width, height);
+    endShape(CLOSE);
+
+    beginShape();
+    vertex(0, 0);
+    for (let i = 0; i < waveform.length; i++) {
+      let x = map(i, 0, waveform.length - 1, 0, width);
+      let y = 0 - waveform[i] * scaleFactor;
+      vertex(x, y);
+    }
+    vertex(width, 0);
+    endShape(CLOSE);
+  }
   
   let progA = snakeA.progress();
   if (progA > 0) {
     push();
-    let mosaicColorA = color(palettes[currentPaletteIndex][3]);
-    fill(mosaicColorA);
+    
     noStroke();
     let targetCountA = floor(map(progA, 0, 1, 0, 500));
     updateMosaic(mosaicSquaresA, targetCountA, fixedW, fixedH);
@@ -111,8 +160,6 @@ function draw() {
   let progD = snakeD.progress();
   if (progD > 0) {
     push();
-    let mosaicColorD = color(palettes[currentPaletteIndex][4]);
-    fill(mosaicColorD);
     noStroke();
     let targetCountD = floor(map(progD, 0, 1, 0, 500));
     updateMosaic(mosaicSquaresD, targetCountD, fixedW, fixedH);
@@ -121,33 +168,53 @@ function draw() {
   }
   
 
-  let progF = fencePlayer.progress() * 2;
-  if (progF > 0 && progF < 2) {
-    let postX1 = width * 0.3;
-    let postX2 = width * 0.4;
-    let postX3 = width * 0.5;
-    let postX4 = width * 0.6;
-    let postX5 = width * 0.7;
-    let fenceBottom = progF * height;
-    stroke(100);
+  // let progF = fencePlayer.progress();
+  // if (progF > 0 && progF < 1) {
+  //   let postX1 = width * 0.3;
+  //   let postX2 = width * 0.4;
+  //   let postX3 = width * 0.5;
+  //   let postX4 = width * 0.6;
+  //   let postX5 = width * 0.7;
+  //   let fenceBottom = progF * height;
+  //   strokeCap(SQUARE);
+  //   strokeWeight(50);
+  //   line(postX1, 200, postX1, fenceBottom);
+  //   line(postX2, 200, postX2, fenceBottom);
+  //   line(postX3, 200, postX3, fenceBottom);
+  //   line(postX4, 200, postX4, fenceBottom);
+  //   line(postX5, 200, postX5, fenceBottom);
+  // }
+
+  let progF = constrain(fencePlayer.progress() * 2, 0, 1);
+
+  if (progF > 0.2 && progF <= 0.7) {
+    let postX = [0.3, 0.4, 0.5, 0.6, 0.7].map(x => width * x);
+
+    let fenceTop = 200;
+    let fenceBottom = map(progF, 0.2, 0.7, fenceTop, height - 200);
+
     strokeCap(SQUARE);
-    strokeWeight(50);
-    line(postX1, 0, postX1, fenceBottom + 100);
-    line(postX2, 0, postX2, fenceBottom + 150);
-    line(postX3, 0, postX3, fenceBottom + 200);
-    line(postX4, 0, postX4, fenceBottom + 150);
-    line(postX5, 0, postX5, fenceBottom + 100);
+    let weight = width / 15;
+    strokeWeight(weight);
+    stroke(color(palettes[currentPaletteIndex][3]));
+    for (let x of postX) {
+      line(x, fenceTop, x, fenceBottom);
+    }
   }
   
   let progE = explosionPlayer.progress();
   if (progE > 0 && progE < 1) {
     let explosionSize = map(progE, 0, 1, 0, 2000);
-    stroke(0, 0, 0);
+    let index = floor(random(0, palettes[currentPaletteIndex].length));
+    let randomStroke = palettes[currentPaletteIndex][index];
+    stroke(0);
     strokeWeight(10);
     noFill()
     drawStar(random(0, width), random(0, height), explosionSize / 2, explosionSize, 5);
+    stroke(randomStroke);
     strokeWeight(25);
     drawStar(width / 4, height / 4, explosionSize / 2, explosionSize, 8);
+    stroke(randomStroke);
     strokeWeight(15);
     drawStar(width * 3 / 4, height * 3 / 4, explosionSize / 2, explosionSize, 8);
   }
@@ -173,8 +240,8 @@ function draw() {
           frameIndex[key] = 0;
           frameTimer[key] = 0;
         }
-      } else {
-        isPlaying[key] = false;
+      // } else {
+      //   isPlaying[key] = false;
       }
 
       if (isPlaying[key] && frameIndex[key] < animationFrames[key].length) {
@@ -225,6 +292,29 @@ function drawStar(x, y, radius1, radius2, npoints) {
   endShape(CLOSE);
 }
 
+function updateMosaic(mosaicArray, targetCount, fixedW, fixedH) {
+  while (mosaicArray.length < targetCount) {
+    let index = floor(random(0, palettes[currentPaletteIndex].length));
+    let mosaicColor = palettes[currentPaletteIndex][index];
+    mosaicArray.push({
+      x: random(0, width),
+      y: random(0, height),
+      w: fixedW,
+      h: fixedH,
+      col: mosaicColor
+    });
+  }
+}
+
+function drawMosaic(mosaicArray) {
+  for (let square of mosaicArray) {
+    fill(square.col);
+    rect(square.x, square.y, square.w, square.h);
+  }
+}
+
+// The GOATED class!!
+
 class SimplePlayer extends Tone.Player {
   constructor(...args) {
     super(...args);
@@ -260,22 +350,5 @@ class SimplePlayer extends Tone.Player {
   
   get playbackRate() {
     return this._playbackRate;
-  }
-}
-
-function updateMosaic(mosaicArray, targetCount, fixedW, fixedH) {
-  while (mosaicArray.length < targetCount) {
-    mosaicArray.push({
-      x: random(0, width),
-      y: random(0, height),
-      w: fixedW,
-      h: fixedH
-    });
-  }
-}
-
-function drawMosaic(mosaicArray) {
-  for (let square of mosaicArray) {
-    rect(square.x, square.y, square.w, square.h);
   }
 }
