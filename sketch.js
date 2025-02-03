@@ -1,3 +1,13 @@
+let palettes = [
+  ['#cdb4db', '#ffc8dd', '#ffafcc', '#bde0fe', '#a2d2ff'],
+  ['#0a0908', '#22333b', '#eae0d5', '#c6ac8f', '#5e503f'],
+  ['#668586', '#82aeb1', '#93c6d6', '#a7acd9', '#9e8fb2'],
+  ['#541388', '#d90368', '#f1e9da', '#2e294e', '#ffd400']
+];
+let currentPaletteIndex = 0;
+
+let paletteSwitchSounds = [];
+
 let cols = 4;
 let rows = 4;
 let gridWidth = 600;
@@ -15,8 +25,8 @@ let frameDuration = 2;
 let mosaicSquaresA = [];
 let mosaicSquaresD = [];
 
-const fixedW = 50;
-const fixedH = 50;
+const fixedW = 10;
+const fixedH = 10;
 
 let soundFiles = [
   "Go.wav", "Atmo_Shot_1.wav", "Atmo_Shot_2.wav", "Fizz.wav",
@@ -51,6 +61,18 @@ function preload() {
       }
     }
   }
+
+  paletteSwitchSounds[0] = new SimplePlayer('audio/Fancy_Perc.wav');
+  paletteSwitchSounds[0].toDestination();
+  
+  paletteSwitchSounds[1] = new SimplePlayer('audio/Foley_Wooden.wav');
+  paletteSwitchSounds[1].toDestination();
+  
+  paletteSwitchSounds[2] = new SimplePlayer('audio/Hollow_Impact.wav');
+  paletteSwitchSounds[2].toDestination();
+  
+  paletteSwitchSounds[3] = new SimplePlayer('audio/Synth_Up.wav');
+  paletteSwitchSounds[3].toDestination();
   
   snakeA = new SimplePlayer('audio/8bit_1.wav');
   snakeA.toDestination();
@@ -72,14 +94,15 @@ function setup() {
 }
 
 function draw() {
-  background(255);
+  background(palettes[currentPaletteIndex][0]);
   
   let progA = snakeA.progress();
   if (progA > 0) {
     push();
-    fill(255, 0, 0);
+    let mosaicColorA = color(palettes[currentPaletteIndex][3]);
+    fill(mosaicColorA);
     noStroke();
-    let targetCountA = floor(map(progA, 0, 1, 0, 100));
+    let targetCountA = floor(map(progA, 0, 1, 0, 500));
     updateMosaic(mosaicSquaresA, targetCountA, fixedW, fixedH);
     drawMosaic(mosaicSquaresA);
     pop();
@@ -88,9 +111,10 @@ function draw() {
   let progD = snakeD.progress();
   if (progD > 0) {
     push();
-    fill(0, 0, 255);
+    let mosaicColorD = color(palettes[currentPaletteIndex][4]);
+    fill(mosaicColorD);
     noStroke();
-    let targetCountD = floor(map(progD, 0, 1, 0, 100));
+    let targetCountD = floor(map(progD, 0, 1, 0, 500));
     updateMosaic(mosaicSquaresD, targetCountD, fixedW, fixedH);
     drawMosaic(mosaicSquaresD);
     pop();
@@ -135,13 +159,13 @@ function draw() {
       let y = gridOffsetY + j * h;
       let key = `${i},${j}`;
       
-      stroke(200);
+      stroke(palettes[currentPaletteIndex][1]);
       strokeWeight(5);
       noFill();
       rect(x, y, w, h);
       
       if (mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h) {
-        fill(200, 200, 200, 150);
+        fill(palettes[currentPaletteIndex][2]);
         rect(x, y, w, h);
         if (!isPlaying[key]) {
           soundMap[key].start();
@@ -180,6 +204,9 @@ function keyTyped() {
     fencePlayer.start();
   } else if (k === 'w') {
     explosionPlayer.start();
+  } else if (key === ' ') {
+    currentPaletteIndex = (currentPaletteIndex + 1) % palettes.length;
+    paletteSwitchSounds[currentPaletteIndex].start();
   }
 }
 
